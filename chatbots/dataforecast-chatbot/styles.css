@@ -1,0 +1,195 @@
+
+body, .stApp {
+    background-color: #FFFFFF !important;  /* White Background */
+    font-family: 'Arial', sans-serif;
+    color: #000000 !important;  /* Black Text */
+}
+
+/* Switch to Dark Mode */
+@media (prefers-color-scheme: dark) {
+    body, .stApp {
+        background-color: #FFFFFF !important;  /* Black Background */
+        color: #000000 !important;  /* White Text */
+    }
+}
+
+.logo-container {
+    text-align: center;
+    margin-top: -30px; /* Optional: Adjust spacing */
+    margin-bottom: 10px;
+}
+
+.logo-container img {
+    width: 100px; /* Adjust logo size */
+    border-radius: 12px; /* Optional: Add rounded corners */
+}
+
+/* Dark Mode - Invert Logo Color */
+@media (prefers-color-scheme: dark) {
+    .logo-container img {
+         /* Invert colors for dark mode */
+        border: 1px solid #FFFFFF; /* Optional: Add a border for visibility */
+    }
+}
+
+
+
+/* ====== Header and Subheader Styling ====== */
+h1, h2, h3, h4, h5, h6 {
+    color: #17a7e0 !important;  /* Black in Light Mode */
+}
+
+@media (prefers-color-scheme: dark) {
+    h1, h2, h3, h4, h5, h6 {
+        color: #17a7e0 !important;  /* White in Dark Mode */
+    }
+}
+
+/* Sidebar Styling */
+.css-1d391kg {
+    background-color: #FFFFFF !important;  /* White Sidebar in Light Mode */
+}
+
+@media (prefers-color-scheme: dark) {
+    .css-1d391kg {
+        background-color: #FFFFFF !important;  /* Black Sidebar in Dark Mode */
+    }
+}
+
+/* Sidebar Text Color */
+.css-1cpxqw2 {
+    color: #000000 !important;  /* Black Text for Light Mode */
+}
+
+@media (prefers-color-scheme: dark) {
+    .css-1cpxqw2 {
+        color: #FFFFFF !important;  /* White Text for Dark Mode */
+    }
+}
+
+/* Text Input Styles */
+.stTextInput > div > div > input, textarea {
+    background-color: #FFFFFF !important; /* White for Light Mode */
+    color: #000000 !important; /* Black Text */
+    border: 1px solid #000000 !important;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .stTextInput > div > div > input, textarea {
+        background-color: #BDC3C7 !important;  /* Black for Dark Mode */
+        color: #FFFFFF !important;  /* White Text */
+        border: 1px solid #000000 !important;
+    }
+}
+
+/* Chatbot Response Styling */
+.chat-response {
+    background-color: #FFFFFF !important;  /* White in Light Mode */
+    color: #000000 !important;  /* Black Text */
+    font-size: 16px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid #CCC;
+    margin-top: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chat-response {
+        background-color: #000000 !important;  /* Black for Dark Mode */
+        color: #FFFFFF !important;  /* White Text */
+        border: 1px solid #FFFFFF !important;
+    }
+}
+
+/* Chat History */
+.chat-history {
+    background-color: #FFFFFF !important;  /* White in Light Mode */
+    color: #000000 !important;  /* Black Text */
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid #CCC;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chat-history {
+        background-color: #000000 !important;  /* Black for Dark Mode */
+        color: #FFFFFF !important;  /* White Text */
+    }
+}
+
+/* Button Styles */
+.stButton > button {
+    background-color: #17a7e0;  /* Olive Green */
+    color: #FFFFFF;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    .stButton > button {
+        background-color: #17a7e0 !important;  /* Black in Dark Mode */
+        color: #FFFFFF !important;
+    }
+}
+
+.stButton > button:hover {
+    background-color: #17a7e0 !important;
+    box-shadow: 0 0 12px rgba(74, 144, 226, 0.8);
+}
+
+/* 📊 DataFrame Styling */
+.stDataFrame {
+    width: 100% !important;
+    height: 400px !important;
+    border: 1px solid #17a7e0;  /* Green Border */
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* ========= Fix Dropdown (selectbox/multiselect) ========= */
+.stSelectbox, .stMultiSelect, .stSelectbox div, .stMultiSelect div {
+    background-color: #FFFFFF !important;  /* White background */
+    color: #000000 !important;             /* Black text */
+}
+
+@media (prefers-color-scheme: dark) {
+    .stDataFrame {
+        border: 1px solid #444444 !important;
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* Style for the text after the subheader */
+h2 + div p {
+    font-size: 16px !important;
+    color: #555555 !important; /* Light Gray for Light Mode */
+}
+
+@media (prefers-color-scheme: dark) {
+    h2 + div p {
+        color: #FFFFFF !important; /* Light Gray for Dark Mode */
+    }
+}
+
+
+/* Hide Footer */
+footer {
+    visibility: hidden;
+}
+
+.logo-container {
+    text-align: center;
+    margin-top: -30px; /* Optional: Adjust spacing */
+    margin-bottom: 10px;
+}
+
+.logo-container img {
+    width: 100px; /* Adjust logo size */
+    border-radius: 12px; /* Optional: Add rounded corners */
+}
+
