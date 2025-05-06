@@ -36,7 +36,7 @@ jobs:
               git fetch origin BBT
               git reset --hard origin/BBT
             else
-              git clone -b develop https://${{ secrets.PAT_GITHUB }}@github.com/bellblaze/BBT.git
+              git clone -b main https://${{ secrets.PAT_GITHUB }}@github.com/bellblaze/BBT.git
             fi
       
   build:
