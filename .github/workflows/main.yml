@@ -61,7 +61,6 @@ jobs:
             echo "Building document-chatbot image..."
             cd document-chatbot
             docker build -t document-chatbot .
-
             echo "Building dataforecast-chatbot image..."
             cd ../dataforecast-chatbot
             docker build -t dataforecast-chatbot .
