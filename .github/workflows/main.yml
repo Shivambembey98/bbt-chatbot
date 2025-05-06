@@ -32,9 +32,9 @@ jobs:
             if [ -d "BBT" ]; then
               cd BBT
               git config pull.rebase false
-              git checkout BBT
-              git fetch origin BBT
-              git reset --hard origin/BBT
+              git checkout main
+              git fetch origin main
+              git reset --hard origin/main
             else
               git clone -b main https://${{ secrets.PAT_GITHUB }}@github.com/bellblaze/BBT.git
             fi
