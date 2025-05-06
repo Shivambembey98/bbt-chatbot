@@ -64,104 +64,94 @@ jobs:
             cd ../dataforecast-chatbot
             docker build -t dataforecast-chatbot .
 
+
+
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: SSH into EC2 and deploy app, setup SSL, configure NGINX
+      - name: SSH into EC2 and deploy container
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
+            # Step 1: Navigate to chatbot directory
             cd /home/ec2-user/BBT/BBT-Admin-Backend/AI/chatbots/
 
-            # Deploy document-chatbot
+            # Step 2: Run Docker Containers
+            echo "Deploying document-chatbot image..."
             cd document-chatbot
             docker run --restart always -d -p 8501:8501 --name document-chatbot-container document-chatbot
 
-            # Deploy dataforecast-chatbot
+            echo "Deploying dataforecast-chatbot image..."
             cd ../dataforecast-chatbot
             docker run --restart always -d -p 8502:8501 --name dataforecast-chatbot-container dataforecast-chatbot
 
-            # Ensure ports 80 and 443 are open in EC2 Security Group before proceeding
-
-            # Install Certbot (already installed will be skipped)
-            sudo yum install -y certbot
-
-            # Generate SSL certs only if missing
-            if [ ! -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem" ]; then
-              echo "SSL certs not found. Generating..."
-              sudo systemctl stop nginx
-              sudo certbot certonly --standalone --non-interactive --agree-tos --preferred-challenges http -m shivam.bembey@bellblazetech.com -d aiplay.bellblazetech.com || { echo "Certbot failed"; exit 1; }
-              sudo systemctl start nginx
-            else
-              echo "SSL certs already exist."
-            fi
-
-            # Write new Nginx config
-            sudo tee /etc/nginx/conf.d/bellblaze-poc.conf > /dev/null << 'EOF'
-            server {
-                listen 80;
-                server_name aiplay.bellblazetech.com;
-
-                location / {
-                    return 301 https://$host$request_uri;
-                }
-            }
-
-            server {
-                listen 443 ssl;
-                server_name aiplay.bellblazetech.com;
-
-                ssl_certificate /etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem;
-                ssl_certificate_key /etc/letsencrypt/live/aiplay.bellblazetech.com/privkey.pem;
-                ssl_protocols TLSv1.2 TLSv1.3;
-                ssl_ciphers HIGH:!aNULL:!MD5;
-
-                location /pricing-calculator/ {
-                    proxy_pass http://localhost:5500/;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection 'upgrade';
-                    proxy_read_timeout 86400;
-                }
-
-                location /dataforecast-chatbot/ {
-                    proxy_pass http://localhost:8502/dataforecast-chatbot/;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection 'upgrade';
-                    proxy_read_timeout 86400;
-                }
-
-                location /document-chatbot/ {
-                    proxy_pass http://localhost:8501/;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection 'upgrade';
-                    proxy_read_timeout 86400;
-                }
-            }
-            EOF
-
-            # Test and reload NGINX only if certs exist
-            if [ -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/privkey.pem" ]; then
-              sudo nginx -t && sudo systemctl reload nginx
-            else
+            # Step 3: Configure Nginx
+            echo "Configuring Nginx..."  
+            if [ ! -f /etc/nginx/conf.d/bellblaze-poc.conf ]; then
+              sudo tee /etc/nginx/conf.d/bellblaze-poc.conf > /dev/null << 'EOF'
+              server {
+                  listen 80;
+                  server_name aiplay.bellblazetech.com;
+              
+                  location / {
+                      return 301 https://$host$request_uri;
+                  }
+              }
+              
+              server {
+                  listen 443 ssl;
+                  server_name aiplay.bellblazetech.com;
+              
+                  ssl_certificate /etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem;
+                  ssl_certificate_key /etc/letsencrypt/live/aiplay.bellblazetech.com/privkey.pem;
+                  ssl_protocols TLSv1.2 TLSv1.3;
+                  ssl_ciphers HIGH:!aNULL:!MD5;
+              
+                  location /pricing-calculator/ {
+                      proxy_pass http://localhost:5500/;
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                      proxy_http_version 1.1;
+                      proxy_set_header Upgrade $http_upgrade;
+                      proxy_set_header Connection 'upgrade';
+                      proxy_read_timeout 86400;
+                  }
+              
+                  location /dataforecast-chatbot/ {
+                      proxy_pass http://localhost:8502/dataforecast-chatbot/;  
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                      proxy_http_version 1.1;
+                      proxy_set_header Upgrade $http_upgrade;
+                      proxy_set_header Connection 'upgrade';
+                      proxy_read_timeout 86400;
+                  }
+                  
+                  location /document-chatbot/ {
+                      proxy_pass http://localhost:8501/;
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                      proxy_http_version 1.1;
+                      proxy_set_header Upgrade $http_upgrade;
+                      proxy_set_header Connection 'upgrade';
+                      proxy_read_timeout 86400;
+                  }
+              }
+              EOF
+                            sudo nginx -t && sudo systemctl reload nginx
+                          else
+                            echo "Config file already exists. Skipping creation."
+                          fi
               echo "SSL certs not found. Nginx reload skipped."
               exit 1
             fi
