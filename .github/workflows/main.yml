@@ -109,7 +109,7 @@ jobs:
               sudo yum install -y certbot python3-certbot-nginx
 
               # Generate certificates using certbot for NGINX
-              sudo certbot --non-interactive --nginx -d aiplay.bellblazetech.com --agree-tos -m your-email@example.com
+              sudo certbot --non-interactive --nginx -d aiplay.bellblazetech.com --agree-tos -m shivam.bembey@bellblazetech.com
             fi
 
             # Step 4: Configure NGINX
