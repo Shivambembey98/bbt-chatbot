@@ -103,63 +103,64 @@ jobs:
             # Step 3: Configure Nginx
             echo "Configuring Nginx..."  
             if [ ! -f /etc/nginx/conf.d/bellblaze-poc.conf ]; then
-              sudo tee /etc/nginx/conf.d/bellblaze-poc.conf > /dev/null << 'EOF'
-              server {
-                  listen 80;
-                  server_name aiplay.bellblazetech.com;
-              
-                  location / {
-                      return 301 https://$host$request_uri;
-                  }
-              }
-              
-              server {
-                  listen 443 ssl;
-                  server_name aiplay.bellblazetech.com;
-              
-                  ssl_certificate /etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem;
-                  ssl_certificate_key /etc/letsencrypt/live/aiplay.bellblazetech.com/privkey.pem;
-                  ssl_protocols TLSv1.2 TLSv1.3;
-                  ssl_ciphers HIGH:!aNULL:!MD5;
-              
-                  location /pricing-calculator/ {
-                      proxy_pass http://localhost:5500/;
-                      proxy_set_header Host $host;
-                      proxy_set_header X-Real-IP $remote_addr;
-                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                      proxy_set_header X-Forwarded-Proto $scheme;
-                      proxy_http_version 1.1;
-                      proxy_set_header Upgrade $http_upgrade;
-                      proxy_set_header Connection 'upgrade';
-                      proxy_read_timeout 86400;
-                  }
-              
-                  location /dataforecast-chatbot/ {
-                      proxy_pass http://localhost:8502/dataforecast-chatbot/;  
-                      proxy_set_header Host $host;
-                      proxy_set_header X-Real-IP $remote_addr;
-                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                      proxy_set_header X-Forwarded-Proto $scheme;
-                      proxy_http_version 1.1;
-                      proxy_set_header Upgrade $http_upgrade;
-                      proxy_set_header Connection 'upgrade';
-                      proxy_read_timeout 86400;
-                  }
-                  
-                  location /document-chatbot/ {
-                      proxy_pass http://localhost:8501/;
-                      proxy_set_header Host $host;
-                      proxy_set_header X-Real-IP $remote_addr;
-                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                      proxy_set_header X-Forwarded-Proto $scheme;
-                      proxy_http_version 1.1;
-                      proxy_set_header Upgrade $http_upgrade;
-                      proxy_set_header Connection 'upgrade';
-                      proxy_read_timeout 86400;
-                  }
-              }
-              EOF
-                            sudo nginx -t && sudo systemctl reload nginx
-                          else
-                            echo "Config file already exists. Skipping creation."
-                          fi
+              sudo tee /etc/nginx/conf.d/bellblaze-poc.conf > /dev/null <<EOF
+            server {
+                listen 80;
+                server_name aiplay.bellblazetech.com;
+            
+                location / {
+                    return 301 https://\$host\$request_uri;
+                }
+            }
+            
+            server {
+                listen 443 ssl;
+                server_name aiplay.bellblazetech.com;
+            
+                ssl_certificate /etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem;
+                ssl_certificate_key /etc/letsencrypt/live/aiplay.bellblazetech.com/privkey.pem;
+                ssl_protocols TLSv1.2 TLSv1.3;
+                ssl_ciphers HIGH:!aNULL:!MD5;
+            
+                location /pricing-calculator/ {
+                    proxy_pass http://localhost:5500/;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_read_timeout 86400;
+                }
+            
+                location /dataforecast-chatbot/ {
+                    proxy_pass http://localhost:8502/dataforecast-chatbot/;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_read_timeout 86400;
+                }
+            
+                location /document-chatbot/ {
+                    proxy_pass http://localhost:8501/;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_read_timeout 86400;
+                }
+            }
+            EOF
+              sudo nginx -t && sudo systemctl reload nginx
+            else
+              echo "Config file already exists. Skipping creation."
+            fi
+
