@@ -9,7 +9,7 @@ jobs:
   install:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH into EC2 and install required dependencies + clone project
+      - name: SSH into EC2 and install dependencies + clone project
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -17,21 +17,18 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
             sudo yum update -y
-            sudo yum install -y docker git
+            sudo yum install -y docker git nginx
             sudo systemctl start docker
             sudo systemctl enable docker
             sudo usermod -aG docker $USER
             sudo chmod 666 /var/run/docker.sock
-
-            sudo dnf install -y nginx
             sudo systemctl start nginx
             sudo systemctl enable nginx
 
-            # Clone or update the project repo
-            cd /home/${USER}
+            # Clone or pull latest project code
+            cd /home/${{ secrets.EC2_USER }}
             if [ -d "BBT" ]; then
               cd BBT
-              git config --global --add safe.directory $(pwd)
               git config pull.rebase false
               git checkout main
               git fetch origin main
@@ -44,28 +41,26 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - name: SSH into EC2 and build docker images
+      - name: SSH into EC2 and build Docker images
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Step 1: Remove old containers if they exist
+            cd /home/ec2-user/BBT/BBT-Admin-Backend/AI/chatbots/
+
+            # Remove old containers
             docker rm -f document-chatbot-container || true
             docker rm -f dataforecast-chatbot-container || true
 
-            # Optional cleanup
             docker system prune -a -f
 
-            # Step 2: Build Docker images
-            cd /home/ec2-user/BBT/BBT-Admin-Backend/AI/chatbots/
-
-            echo "Building document-chatbot image..."
+            # Build document-chatbot
             cd document-chatbot
             docker build -t document-chatbot .
 
-            echo "Building dataforecast-chatbot image..."
+            # Build dataforecast-chatbot
             cd ../dataforecast-chatbot
             docker build -t dataforecast-chatbot .
 
@@ -73,40 +68,42 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: SSH into EC2 and deploy container + setup SSL + configure Nginx
+      - name: SSH into EC2 and deploy app, setup SSL, configure NGINX
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Step 1: Deploy containers
             cd /home/ec2-user/BBT/BBT-Admin-Backend/AI/chatbots/
 
-            echo "Running document-chatbot container..."
+            # Deploy document-chatbot
             cd document-chatbot
             docker run --restart always -d -p 8501:8501 --name document-chatbot-container document-chatbot
 
-            echo "Running dataforecast-chatbot container..."
+            # Deploy dataforecast-chatbot
             cd ../dataforecast-chatbot
             docker run --restart always -d -p 8502:8501 --name dataforecast-chatbot-container dataforecast-chatbot
 
-            # Step 2: SSL Cert setup
-            CERT_DIR="/etc/letsencrypt/live/aiplay.bellblazetech.com"
-            if [ -f "$CERT_DIR/fullchain.pem" ] && [ -f "$CERT_DIR/privkey.pem" ]; then
-              echo "SSL certificates exist."
+            # Ensure ports 80 and 443 are open in EC2 Security Group before proceeding
+
+            # Install Certbot (already installed will be skipped)
+            sudo yum install -y certbot
+
+            # Generate SSL certs only if missing
+            if [ ! -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem" ]; then
+              echo "SSL certs not found. Generating..."
+              sudo certbot certonly --standalone --non-interactive --agree-tos --preferred-challenges http -m shivam.bembey@bellblazetech.com -d aiplay.bellblazetech.com
             else
-              echo "Installing certbot and generating certificates..."
-              sudo yum install -y certbot python3-certbot-nginx
-              sudo certbot --non-interactive --nginx -d aiplay.bellblazetech.com --agree-tos -m shivam.bembey@bellblazetech.com
+              echo "SSL certs already exist."
             fi
 
-            # Step 3: NGINX config
-            echo "Writing Nginx config..."
-            sudo bash -c 'cat > /etc/nginx/conf.d/bellblaze-poc.conf' <<'EOF'
+            # Write new Nginx config
+            sudo tee /etc/nginx/conf.d/bellblaze-poc.conf > /dev/null << 'EOF'
             server {
                 listen 80;
                 server_name aiplay.bellblazetech.com;
+
                 location / {
                     return 301 https://$host$request_uri;
                 }
@@ -159,5 +156,10 @@ jobs:
             }
             EOF
 
-            # Step 4: Reload nginx
-            sudo nginx -t && sudo systemctl reload nginx
+            # Test and reload NGINX only if certs exist
+            if [ -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/privkey.pem" ]; then
+              sudo nginx -t && sudo systemctl reload nginx
+            else
+              echo "SSL certs not found. Nginx reload skipped."
+              exit 1
+            fi
