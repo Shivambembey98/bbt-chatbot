@@ -50,8 +50,18 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Step 1: Remove old containers and images
-            docker container rm document-chatbot-container dataforecast-chatbot-container -f
+            # Step 1: Remove old containers if they exist
+            if [ "$(docker ps -a -q -f name=document-chatbot-container)" ]; then
+              docker container rm document-chatbot-container -f
+            else
+              echo "document-chatbot-container does not exist."
+            fi
+            if [ "$(docker ps -a -q -f name=dataforecast-chatbot-container)" ]; then
+              docker container rm dataforecast-chatbot-container -f
+            else
+              echo "dataforecast-chatbot-container does not exist."
+            fi
+            # Optional: Remove dangling images and prune unused data
             docker system prune -a -f
             
             # Step 2: Navigate to chatbot directory
