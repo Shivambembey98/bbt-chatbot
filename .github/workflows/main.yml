@@ -93,7 +93,9 @@ jobs:
             # Generate SSL certs only if missing
             if [ ! -f "/etc/letsencrypt/live/aiplay.bellblazetech.com/fullchain.pem" ]; then
               echo "SSL certs not found. Generating..."
-              sudo certbot certonly --standalone --non-interactive --agree-tos --preferred-challenges http -m shivam.bembey@bellblazetech.com -d aiplay.bellblazetech.com
+              sudo systemctl stop nginx
+              sudo certbot certonly --standalone --non-interactive --agree-tos --preferred-challenges http -m shivam.bembey@bellblazetech.com -d aiplay.bellblazetech.com || { echo "Certbot failed"; exit 1; }
+              sudo systemctl start nginx
             else
               echo "SSL certs already exist."
             fi
