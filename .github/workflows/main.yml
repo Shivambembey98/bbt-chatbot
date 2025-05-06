@@ -22,15 +22,16 @@ jobs:
             sudo systemctl enable docker
             sudo usermod -aG docker $USER
             sudo chmod 666 /var/run/docker.sock
-            
+
             sudo dnf install -y nginx
             sudo systemctl start nginx
             sudo systemctl enable nginx
 
             # Clone or update the project repo
-            git config --global --add safe.directory /home/${{ secrets.EC2_USER }}/BBT
+            cd /home/${USER}
             if [ -d "BBT" ]; then
               cd BBT
+              git config --global --add safe.directory $(pwd)
               git config pull.rebase false
               git checkout main
               git fetch origin main
@@ -38,12 +39,12 @@ jobs:
             else
               git clone -b main https://${{ secrets.PAT_GITHUB }}@github.com/bellblaze/BBT.git
             fi
-      
+
   build:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - name: SSH into EC2 and build docker images 
+      - name: SSH into EC2 and build docker images
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -51,31 +52,22 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
             # Step 1: Remove old containers if they exist
-            if [ "$(docker ps -a -q -f name=document-chatbot-container)" ]; then
-              docker container rm document-chatbot-container -f
-            else
-              echo "document-chatbot-container does not exist."
-            fi
-            if [ "$(docker ps -a -q -f name=dataforecast-chatbot-container)" ]; then
-              docker container rm dataforecast-chatbot-container -f
-            else
-              echo "dataforecast-chatbot-container does not exist."
-            fi
-            # Optional: Remove dangling images and prune unused data
+            docker rm -f document-chatbot-container || true
+            docker rm -f dataforecast-chatbot-container || true
+
+            # Optional cleanup
             docker system prune -a -f
-            
-            # Step 2: Navigate to chatbot directory
+
+            # Step 2: Build Docker images
             cd /home/ec2-user/BBT/BBT-Admin-Backend/AI/chatbots/
 
-            # Step 3: Build Docker images
             echo "Building document-chatbot image..."
             cd document-chatbot
             docker build -t document-chatbot .
+
             echo "Building dataforecast-chatbot image..."
             cd ../dataforecast-chatbot
             docker build -t dataforecast-chatbot .
-
-
 
   deploy:
     runs-on: ubuntu-latest
@@ -88,37 +80,33 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            # Step 1: Navigate to chatbot directory
+            # Step 1: Deploy containers
             cd /home/ec2-user/BBT/BBT-Admin-Backend/AI/chatbots/
 
-            # Step 2: Run Docker Containers
-            echo "Deploying document-chatbot image..."
+            echo "Running document-chatbot container..."
             cd document-chatbot
             docker run --restart always -d -p 8501:8501 --name document-chatbot-container document-chatbot
 
-            echo "Deploying dataforecast-chatbot image..."
+            echo "Running dataforecast-chatbot container..."
             cd ../dataforecast-chatbot
             docker run --restart always -d -p 8502:8501 --name dataforecast-chatbot-container dataforecast-chatbot
 
-            # Step 3: Check if SSL certs exist
+            # Step 2: SSL Cert setup
             CERT_DIR="/etc/letsencrypt/live/aiplay.bellblazetech.com"
             if [ -f "$CERT_DIR/fullchain.pem" ] && [ -f "$CERT_DIR/privkey.pem" ]; then
-              echo "SSL certificates found. Proceeding to Nginx config."
+              echo "SSL certificates exist."
             else
-              echo "SSL certificates not found. Installing Certbot and generating certificates..."
+              echo "Installing certbot and generating certificates..."
               sudo yum install -y certbot python3-certbot-nginx
-
-              # Generate certificates using certbot for NGINX
               sudo certbot --non-interactive --nginx -d aiplay.bellblazetech.com --agree-tos -m shivam.bembey@bellblazetech.com
             fi
 
-            # Step 4: Configure NGINX
-            echo "Configuring Nginx..."
-            sudo tee /etc/nginx/conf.d/bellblaze-poc.conf > /dev/null << 'EOF'
+            # Step 3: NGINX config
+            echo "Writing Nginx config..."
+            sudo bash -c 'cat > /etc/nginx/conf.d/bellblaze-poc.conf' <<'EOF'
             server {
                 listen 80;
                 server_name aiplay.bellblazetech.com;
-
                 location / {
                     return 301 https://$host$request_uri;
                 }
@@ -171,6 +159,5 @@ jobs:
             }
             EOF
 
-            # Step 5: Reload NGINX
+            # Step 4: Reload nginx
             sudo nginx -t && sudo systemctl reload nginx
-
