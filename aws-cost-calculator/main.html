@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Pricing Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1040.0.min.js"></script>
+</head>
+<body>
+    <img src="BellBlazeTech-Logo.png" alt="Logo" class="logo">
+    <header>
+        <h1>AWS Pricing Calculator💰</h1>
+    </header>
+    <div class="container">
+        <!-- File Upload & Download Section -->
+        <div class="column file-section">
+            <h2 class="m1">📂 Upload & Download Files</h2>
+            <div class="upload-section">
+                <div class="col">
+                <input type="file" id="fileInput" accept=".xls,.xlsx,.xlsm,csv">
+                <p>Please upload <strong>Excel</strong> files only (Max size: <strong>1 MB</strong>)</p>
+                </div>
+                <button onclick="uploadFile()">
+                    <img src="upload.png" class="button-icon">Upload
+                </button>
+            </div>
+            <div id="uploadStatus" class="status-message"> </div>
+
+            <div class="file-list-section">
+                <h2>📜 Available Files</h2>
+                <select id="fileDropdown"></select>
+                <button onclick="downloadSelectedFile()"><img src="download.png" class="button-icon">Download</button>
+            </div>
+        </div>
+
+        <!-- Chatbot Section -->
+        <div class="column chat-container">
+            <h2>🤖 AI Chatbot</h2>
+            <div class="chatbox" id="chatbox">
+                <div id="messages"></div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Describe your server configuration..." />
+                <button onclick="sendMessage()"><img src="send.png" class="icon">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dynamic Subscription Status Display -->
+    <div id="subscriptionStatus" class="usage-counter">
+        <div id="statusMessage"></div>
+        <div>File Uploads: <span id="uploadCountDisplay">0</span>/<span id="maxUploads">3</span></div>
+        <div>Queries used: <span id="queryCountDisplay">0</span>/<span id="maxQueries">6</span></div>
+    </div>
+
+    <div id="subscribeButtonContainer">
+        <!-- Subscribe button will be shown/hidden by JavaScript -->
+        <button onclick="handleSubscription()" class="subscribe">
+            Subscribe
+        </button>
+    </div>
+
+    <div id="userInfoContainer" class="user-info-container"></div>
+
+    <button onclick="logout()" class="logout">
+        Sign Out
+    </button>
+    
+    <script>
+        const UNIFIED_API_ENDPOINT = 'https://al0pc26yjl.execute-api.ap-south-1.amazonaws.com/prod/payment/verify';
+        const MAX_RETRY_ATTEMPTS = 3;
+        let retryCount = 0;
+        // Check subscription status on page load
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Redirect to index.html if no token is found
+            let token = localStorage.getItem("token");
+            if (!token || token.trim() === "") {
+                alert("Unauthorized access. Redirecting...");
+                window.location.href = "http://bellblaze-dev.s3-website.ap-south-1.amazonaws.com/login?DomainPath=/pricing-calculator";
+                return;
+            }
+
+            // Clean token
+            token = cleanToken(token);
+
+            // Decode the token to get user info
+            // Remove URL parameters if present (like ?token=)
+            if (token.includes('?token=')) {
+                token = token.split('?token=')[1];
+            }
+
+            // Split the token into parts
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                throw new Error('Invalid JWT format');
+            }
+
+            // Base64Url decode with padding support
+            const base64Url = parts[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const paddedBase64 = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+            
+            // Decode and parse
+            const decodedPayload = JSON.parse(atob(paddedBase64));
+            
+            console.log('Decoded Payload:', decodedPayload);
+            try {
+                const username = decodedPayload.name;
+                const useremail = decodedPayload.email;
+                const provider_user_id = decodedPayload.sub;
+
+                localStorage.setItem("username", username);
+                localStorage.setItem("useremail", useremail);
+                localStorage.setItem("provider_user_id", provider_user_id);
+
+                console.log(username);
+                console.log(useremail);
+                console.log(provider_user_id);
+
+                // Verify user against database
+                const isValidUser = await verifyUserWithDatabaseWithRetry();
+        
+                if (!isValidUser) {
+                    alert("User not authorized. Redirecting...");
+                    window.location.href = "http://bellblaze-dev.s3-website.ap-south-1.amazonaws.com/login?DomainPath=/pricing-calculator";
+                    return;
+                }
+        
+                displayUserName();
+                checkSubscriptionStatus();
+            } catch (error) {
+                console.error('Error during authentication:', error);
+                window.location.href = "http://bellblaze-dev.s3-website.ap-south-1.amazonaws.com/login?DomainPath=/pricing-calculator";
+            }
+        });
+
+        function cleanToken(token) {
+            // Remove any URL parameters that might be attached to the token
+            return token.split('?')[0].split('&')[0].trim();
+        }
+
+        function handleSubscription() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("No token found—please log in again.");
+            } else {
+                const params = new URLSearchParams({
+                    app_id: "pricing-calculator",
+                    token: token
+                });
+                window.location.href = "subscribe.html?" + params.toString();
+            }
+        }
+
+        async function verifyUserWithDatabaseWithRetry() {
+            while (retryCount < MAX_RETRY_ATTEMPTS) {
+                try {
+                    const result = await verifyUserWithDatabase();
+                    if (result) {
+                        return true;
+                    }
+                    
+                    retryCount++;
+                    if (retryCount < MAX_RETRY_ATTEMPTS) {
+                        console.log(`Verification failed. Retrying (${retryCount})...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 seconds before retry
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${retryCount + 1} failed:`, error);
+                    retryCount++;
+                    if (retryCount >= MAX_RETRY_ATTEMPTS) {
+                        throw error;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+            return false;
+        }
+
+        async function verifyUserWithDatabase() {
+            const useremail = localStorage.getItem("useremail");
+            const provider_user_id = localStorage.getItem("provider_user_id");
+            try {
+                // Prepare the request payload
+                const payload = {
+                    action: "verifyUser",
+                    email: useremail
+                };
+                // Only add provider_user_id if it exists and is not 'undefined'
+                if (provider_user_id && provider_user_id !== 'undefined') {
+                    payload.provider_user_id = provider_user_id;
+                }
+                const response = await fetch(UNIFIED_API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem("token")}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                console.log('received response:', response);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+                }
+                const data = await response.json();
+                console.log('Verification response', data);
+                return data.isValidUser;
+            } catch (error) {
+                console.error('Error verifying user:', error);
+                return false;
+            }
+        }
+
+        function displayUserName() {
+            const username = localStorage.getItem("username");
+            if (username) {
+                // Create a container for user info in the top-right corner
+                let userContainer = document.getElementById('userInfoContainer');
+                if (!userContainer) {
+                    userContainer = document.createElement('div');
+                    userContainer.id = 'userInfoContainer';
+                    userContainer.className = 'user-info-container';
+                    document.body.appendChild(userContainer);
+                }
+        
+                // Create or update welcome message
+                let welcomeElement = document.getElementById('welcomeMessage');
+                if (!welcomeElement) {
+                    welcomeElement = document.createElement('div');
+                    welcomeElement.id = 'welcomeMessage';
+                    welcomeElement.className = 'welcome-message';
+                    userContainer.appendChild(welcomeElement);
+                }
+                welcomeElement.textContent = `Welcome, ${username}!`;
+        
+                // Move the sign-out button into this container if it's not already there
+                const logoutButton = document.querySelector('.logout');
+                if (logoutButton && !userContainer.contains(logoutButton)) {
+                    userContainer.appendChild(logoutButton);
+                }
+            }
+        }
+
+        async function verifysubscriptionWithDatabase() {
+            const useremail = localStorage.getItem("useremail");
+            const provider_user_id = localStorage.getItem("provider_user_id");
+            try {
+                // Prepare the request payload
+                const payload = {
+                    action: "checkStatus",
+                    email: useremail
+                };
+                // Only add provider_user_id if it exists and is not 'undefined'
+                if (provider_user_id && provider_user_id !== 'undefined') {
+                    payload.provider_user_id = provider_user_id;
+                }
+                const response = await fetch(UNIFIED_API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                console.log('received response:', response);
+
+                if (!response.ok) {
+                    console.error('API Error Response:',await response.text());
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error verifying subscription:', error);
+                return {
+                    isSubscribed: false,
+                    uploadCount: 0,
+                    queryCount: 0,
+                    maxUploads: 3,
+                    maxQueries: 6,
+                    remainingUploads: 3,
+                    remainingQueries: 6
+                };
+            }
+        }
+
+        async function checkSubscriptionStatus() {
+            const useremail = localStorage.getItem("useremail");
+            const data = await verifysubscriptionWithDatabase();
+            const isSubscribed = data.isSubscribed
+            const subscriptionStatusDiv = document.getElementById('subscriptionStatus');
+            const subscribeButtonContainer = document.getElementById('subscribeButtonContainer');
+            
+            if (data.isSubscribed) {
+                // User is subscribed - show premium status
+                subscriptionStatusDiv.innerHTML = `
+                    <div class="premium-badge">
+                        <strong>Premium User:</strong> Unlocked Premium Access
+                    </div>
+                    <div>File Uploads: <span id="uploadCountDisplay">${data.uploadCount}</span>/<span id="maxUploads">${data.maxUploads}</span></div>
+                <div>Queries used: <span id="queryCountDisplay">${data.queryCount}</span>/<span id="maxQueries">${data.maxQueries}</span></div>
+                `;
+                // Hide subscribe button
+                subscribeButtonContainer.style.display = 'none';
+            } else {
+                // User is not subscribed - show free tier limits
+                subscriptionStatusDiv.innerHTML = `
+                    <strong>Free Tier Limits:</strong>
+                    <div>File Uploads: <span id="uploadCountDisplay">${data.uploadCount}</span>/<span id="maxUploads">${data.maxUploads}</span></div>
+                <div>Queries used: <span id="queryCountDisplay">${data.queryCount}</span>/<span id="maxQueries">${data.maxQueries}</span></div>
+                `;
+                // Show subscribe button
+                subscribeButtonContainer.style.display = 'block';
+            }
+        }
+
+        async function updateUsageCounters() {
+            const useremail = localStorage.getItem("useremail");
+            const data = await verifysubscriptionWithDatabase();
+            
+            // Update counters
+            document.getElementById("uploadCountDisplay").textContent = data.uploadCount;
+            document.getElementById("queryCountDisplay").textContent = data.queryCount;
+            document.getElementById("maxUploads").textContent = data.maxUploads;
+            document.getElementById("maxQueries").textContent = data.maxQueries;
+            
+            // Update subscription status display
+            const statusMessage = document.getElementById("statusMessage");
+            if (!statusMessage) {
+                console.warn("Element with ID 'statusMessage' not found.");
+                return;
+            }
+            if (data.isSubscribed) {
+                statusMessage.innerHTML = '<div class="premium-badge"><strong>Premium User:</strong> Unlocked Premium Access</div>';
+                } else {
+                statusMessage.innerHTML = '<strong>Free Tier Limits:</strong>';
+            }
+            
+            // Show/hide subscribe button
+            document.getElementById("subscribeButtonContainer").style.display = 
+                data.isSubscribed ? 'none' : 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUsageCounters();
+        });
+
+        function logout() {
+            // Clear all stored data
+            localStorage.removeItem("token");
+            localStorage.removeItem("username");
+            localStorage.removeItem("scrollPosition");
+            localStorage.removeItem("storedFiles");
+            
+            // Redirect to the desired page
+            window.location.href = "https://www.bellblazetech.com/products/our-solutions";
+        }
+    </script>      
+    <script src="script.js"></script>
+    <script src="chat.js"></script>  
+</body>
+</html>

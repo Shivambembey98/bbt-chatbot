@@ -3,15 +3,92 @@ AWS.config.credentials = new AWS.CognitoIdentityCredentials({
     IdentityPoolId: "ap-south-1:7a8263a8-c022-4670-9496-0beb10382c33"
 });
 
-// Initialize upload count if it doesn't exist
-if (!localStorage.getItem("uploadCount")) {
-    localStorage.setItem("uploadCount", "0");
+async function incrementCounter(counterType) {
+    const useremail = localStorage.getItem("useremail");
+    try {
+        const response = await fetch(UNIFIED_API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: "incrementCounter",
+                email: useremail,
+                counterType: counterType
+            })
+        });
+        if (!response.ok) {
+            throw new Error('Failed to increment counter');
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error incrementing counter:', error);
+        throw error;
+    }
 }
 
 // Function to update the display counters
-function updateUsageCounters() {
-    document.getElementById("uploadCountDisplay").textContent = localStorage.getItem("uploadCount") || "0";
-    document.getElementById("queryCountDisplay").textContent = localStorage.getItem("queryCount") || "0";
+async function updateUsageCounters() {
+    const useremail = localStorage.getItem("useremail");
+    const provider_user_id = localStorage.getItem("provider_user_id");
+    try {
+        // Prepare the request payload
+        const payload = {
+            action: "checkStatus",
+            email: useremail
+        };
+        // Only add provider_user_id if it exists and is not 'undefined'
+        if (provider_user_id && provider_user_id !== 'undefined') {
+            payload.provider_user_id = provider_user_id;
+        }
+        const response = await fetch(UNIFIED_API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem("token")}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update counters
+            document.getElementById("uploadCountDisplay").textContent = data.uploadCount;
+            document.getElementById("queryCountDisplay").textContent = data.queryCount;
+            document.getElementById("maxUploads").textContent = data.maxUploads;
+            document.getElementById("maxQueries").textContent = data.maxQueries;
+            
+            // Update subscription status display
+            const statusMessage = document.getElementById("statusMessage");
+            if (!statusMessage) {
+                console.warn("Element with ID 'statusMessage' not found.");
+                return;
+            }
+            if (data.isSubscribed) {
+                statusMessage.innerHTML = '<div class="premium-badge"><strong>Premium User:</strong> Unlocked Premium Access</div>';
+                if (document.getElementById("remainingCounts")) {
+                    document.getElementById("remainingCounts").style.display = 'block';
+                    document.getElementById("remainingUploads").textContent = data.remainingUploads;
+                    document.getElementById("remainingQueries").textContent = data.remainingQueries;
+                }
+            } else {
+                statusMessage.innerHTML = '<strong>Free Tier Limits:</strong>';
+                if (document.getElementById("remainingCounts")) {
+                    document.getElementById("remainingCounts").style.display = 'none';
+                }
+            }
+            
+            // Show/hide subscribe button
+            if (document.getElementById("subscribeButtonContainer")) {
+                document.getElementById("subscribeButtonContainer").style.display = 
+                    data.isSubscribed ? 'none' : 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Error updating usage status:', error);
+    }
 }
 
 const s3 = new AWS.S3();
@@ -22,11 +99,36 @@ let uploadedFilename = ""; // Used to track original upload
 let uploadTime = null; // Track exact upload timestamp
 
 // Upload File to S3
-function uploadFile() {
-    // Check upload count first
-    let currentUploads = parseInt(localStorage.getItem("uploadCount")) || 0;
-    if (currentUploads >= 3) {
-        alert("⚠️ You've reached your free tier limit of 3 uploads.\nPlease subscribe for unlimited access.");
+async function uploadFile() {
+    const useremail = localStorage.getItem("useremail");
+    const provider_user_id = localStorage.getItem("provider_user_id");
+
+    // Prepare the request payload
+    const payload = {
+        action: "checkStatus",
+        email: useremail
+    };
+    // Only add provider_user_id if it exists and is not 'undefined'
+    if (provider_user_id && provider_user_id !== 'undefined') {
+        payload.provider_user_id = provider_user_id;
+    }
+    
+    // First check limits
+    const statusResponse = await fetch(UNIFIED_API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(payload)
+    });
+    
+    const statusData = await statusResponse.json();
+    
+    if (statusData.uploadCount >= statusData.maxUploads) {
+        const tier = statusData.isSubscribed ? 'premium' : 'free';
+        const message = `⚠️ You've reached your ${tier} tier limit of ${statusData.maxUploads} uploads.`;
+        alert(message);
         return;
     }
 
@@ -68,10 +170,15 @@ function uploadFile() {
         if (err) {
             alert("Upload failed: " + err.message);
         } else {
-            // Increment upload count only on success
+            // Increment upload count
             currentUploads = parseInt(localStorage.getItem("uploadCount")) || 0;
             localStorage.setItem("uploadCount", (currentUploads + 1).toString());
             updateUsageCounters();
+                
+            // Different messages based on subscription status
+            if (currentUploads === maxUploads) {
+                alert("⚠️ This is your last upload. Please subscribe for more access.");
+            }
             
             document.getElementById("uploadStatus").innerText = "Upload Successful!";
             
@@ -82,6 +189,22 @@ function uploadFile() {
             }, 1000);
         }
     });
+    // After successful upload:
+    const incrementResponse = await incrementCounter('uploadCount');
+    updateUsageDisplay(incrementResponse);
+}
+
+function updateUsageDisplay(counterData) {
+    document.getElementById("uploadCountDisplay").textContent = counterData.uploadCount;
+    document.getElementById("queryCountDisplay").textContent = counterData.queryCount;
+    
+    // Update remaining counts display if you have those elements
+    if (document.getElementById("remainingUploads")) {
+        document.getElementById("remainingUploads").textContent = counterData.remainingUploads;
+    }
+    if (document.getElementById("remainingQueries")) {
+        document.getElementById("remainingQueries").textContent = counterData.remainingQueries;
+    }
 }
 
 // List Files in S3 and detect new files
@@ -224,7 +347,7 @@ document.getElementById("fileDropdown").addEventListener("change", function () {
 });
 
 window.onload = function () {
-    updateUsageCounters();
+    // updateUsageCounters();
     uploadedFilename = ""; // Clear on first load
     listFiles();
     setInterval(listFiles, 5000);  // Auto-refresh file list every 5 seconds

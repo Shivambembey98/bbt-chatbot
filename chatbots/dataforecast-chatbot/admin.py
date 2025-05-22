@@ -2,13 +2,17 @@ import os
 import streamlit as st
 import json
 import pandas as pd
-from auth import DATA_DIR, load_users, save_users
+from auth import DATA_DIR, load_users, save_users, require_auth, is_authenticated
 
 # Admin Panel Password
 ADMIN_PASSWORD = "admin123"  # Change this to a secure password
 
 def admin_panel():
     st.title("🔐 Admin Panel")
+    
+    # First verify that the user is authenticated
+    if not require_auth():
+        st.stop()
     
     # Admin authentication
     if "admin_authenticated" not in st.session_state:

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Subscribe to Premium</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #17a7e0, #2575fc);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-size: 200px;
+      opacity: 0.95;
+    }
+
+    .payment-container {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .payment-container h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .payment-container input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .payment-container button {
+      width: 100%;
+      padding: 12px;
+      background-color: #17a7e0;
+      color: white;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .payment-container button:hover {
+      background-color: #1490c2;
+    }
+  </style>
+</head>
+<body>
+  <div class="payment-container">
+    <h2>Subscribe to Premium</h2>
+    <form id="payment-form" onsubmit="openRazorpay(); return false;">
+      <input type="text" id="name" placeholder="Your Name" required />
+      <input type="email" id="email" placeholder="Your Email" required />
+      <input type="tel" id="phone" placeholder="Phone Number" required />
+      <button type="submit">Pay ₹1</button>
+    </form>
+  </div>
+
+  <script>
+    function openRazorpay() {
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const phone = document.getElementById("phone").value;
+
+      const options = {
+        key: "rzp_live_v6qAzViosoOdnK", 
+        amount: 100,
+        currency: "INR",
+        name: "Bell Blaze Technologies",
+        description: "Unlock Premium Features",
+        prefill: {
+          name: name,
+          email: email,
+          contact: phone
+        },
+        handler: function (response) {
+          // Direct redirect to elastic IP
+          const redirectUrl = `f"{ELASTIC_IP}:8502/dataforecast-chatbot/?payment=success&app_id={app_id}`;
+          window.location.href = redirectUrl;
+        },
+        theme: {
+          color: "#17a7e0"
+        }
+      };
+      const rzp = new Razorpay(options);
+      rzp.open();
+    }
+  </script>
+</body>
+</html>

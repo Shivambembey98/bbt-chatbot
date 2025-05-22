@@ -61,6 +61,7 @@ An interactive web application for data analysis and time-series forecasting wit
 - Time-series forecasting with Prophet and Random Forest models
 - AI-powered chatbot for data insights
 - S3 integration for persistent storage
+- **Premium subscription** with Razorpay payment integration
 
 ## AWS S3 Integration
 
@@ -110,7 +111,12 @@ export AWS_DEFAULT_REGION=ap-south-1
 
 3. **Set up AWS credentials** as described above.
 
-4. **Run the application**:
+4. **Configure environment variables**:
+   - Create a `.env` file based on the provided `env_example.txt` template
+   - Set your database credentials, Razorpay API keys, and other configuration variables
+   - For production, set the `REDIRECT_URL` to your public ngrok or domain URL
+
+5. **Run the application**:
    ```bash
    streamlit run main.py
    ```
@@ -158,6 +164,47 @@ To run the application as a background service:
    sudo systemctl status streamlit-app
    ```
 
+## Payment System Setup
+
+### Razorpay Integration
+
+This application uses Razorpay for handling premium subscription payments. To set up:
+
+1. **Create a Razorpay account** at [razorpay.com](https://razorpay.com/)
+2. **Get your API keys** from the Razorpay Dashboard
+3. **Add your keys to the `.env` file**:
+   ```
+   RAZORPAY_KEY_ID=rzp_test_your_key_id_here
+   RAZORPAY_KEY_SECRET=your_key_secret_here
+   ```
+
+### Payment Flow
+
+1. User clicks on "Upgrade to Premium" in the application
+2. They're redirected to a payment form (either inline or in a new tab)
+3. After successful payment, Razorpay redirects to your application with transaction data
+4. The application verifies the payment and upgrades the user to premium
+
+### Running with HTTPS
+
+For secure payments in production, you need HTTPS. Options include:
+
+1. **Using ngrok for local development**:
+   ```bash
+   ngrok http 8501
+   ```
+   Then set `REDIRECT_URL` in `.env` to your ngrok URL
+
+2. **Proper SSL setup in production** with a domain name and SSL certificate
+
+### Database Setup for Transactions
+
+The application tracks payment transactions in the database. Ensure your database has the necessary tables by running:
+
+```bash
+python -c "from db_storage import initialize_database; initialize_database()"
+   ```
+
 ## File Structure
 
 ```
@@ -165,6 +212,9 @@ To run the application as a background service:
 ├── auth.py                # Authentication module
 ├── chatbot.py             # Chatbot functionality
 ├── s3_storage.py          # S3 storage integration
+├── db_storage.py          # Database storage integration
+├── razorpay_payment.py    # Payment system integration
+├── payment.html           # Payment interface template
 ├── admin.py               # Admin panel
 ├── requirements.txt       # Required packages
 ├── styles.css             # CSS styling
@@ -187,5 +237,9 @@ statsmodels==0.14.1
 scikit-learn==1.4.0
 prophet==1.1.5
 plotly==5.18.0
+razorpay==1.4.1
+python-dotenv==1.0.0
+sqlalchemy==2.0.27
+psycopg2-binary==2.9.9
 ```
 

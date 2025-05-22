@@ -126,6 +126,12 @@ def query_bedrock_stream(user_input, df, bedrock_client):
 
 # 🧠 Chatbot Section
 def chatbot_section(dataframes, file_names, bedrock_client):
+    # Check if user is authenticated before proceeding
+    if not st.session_state.get("authenticated", False):
+        logger.info("User not authenticated - chatbot unavailable")
+        st.warning("⚠️ Please log in to use the chat assistant.")
+        return
+        
     st.subheader("🤖 Chat with Your Dataset")
 
     # Use default username
@@ -198,32 +204,24 @@ def chatbot_section(dataframes, file_names, bedrock_client):
         # Generate assistant response with streaming effect
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
-            full_response = ""
             
-            # Get the complete response
-            with st.spinner("Analyzing your data..."):
-                complete_response = query_bedrock_stream(user_input, selected_df, bedrock_client)
+            # For real streaming effect, build up the response gradually
+            full_response = query_bedrock_stream(user_input, selected_df, bedrock_client)
             
-            # Simulate streaming by gradually revealing the response
-            for i in range(len(complete_response) + 1):
-                full_response = complete_response[:i]
-                response_placeholder.markdown(full_response + "▌" if i < len(complete_response) else full_response)
-                if i < len(complete_response):
-                    # Adjust delay for realistic typing speed (slower for longer responses)
-                    st.session_state["_delay"] = 0.01 if len(complete_response) > 500 else 0.03
-                    time.sleep(st.session_state["_delay"])
-        
-        # Add assistant response to state after streaming finishes
-        st.session_state.messages.append({"role": "assistant", "content": complete_response})
-        
-        # Save to history (convert messages to history format)
-        history = []
-        for i in range(0, len(st.session_state.messages), 2):
-            if i+1 < len(st.session_state.messages):
-                history.append({
-                    "question": st.session_state.messages[i]["content"],
-                    "answer": st.session_state.messages[i+1]["content"],
-                    "timestamp": str(pd.Timestamp.now())
-                })
-        
-        save_user_chat_history(username, history[-10:])  # Keep last 10 conversations
+            # Display response with a typing effect
+            response_text = ""
+            for i in range(min(len(full_response),1000)):  # Cap at 100 chars for the animation
+                response_text += full_response[i]
+                response_placeholder.markdown(response_text + "▌")
+                time.sleep(0.01)  # Small delay for typing effect
+            
+            # Show the rest of the response instantly
+            response_placeholder.markdown(full_response)
+            
+            # Save the conversation
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            save_user_chat_history(username, [
+                {"question": msg["content"], "answer": st.session_state.messages[i+1]["content"]}
+                for i, msg in enumerate(st.session_state.messages) 
+                if msg["role"] == "user" and i+1 < len(st.session_state.messages)
+            ])

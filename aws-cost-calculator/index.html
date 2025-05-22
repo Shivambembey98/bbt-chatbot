@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Session</title>
+    <style>
+        #accesscontainer{text-align: center; font-size: 22px;}
+    </style>
+</head>
+<body>
+    <div id="accesscontainer"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            createSession();
+        });
+
+        function createSession() {
+            console.log("Current URL:", window.location.href);
+            const urlParams = new URLSearchParams(window.location.search);
+            let token = urlParams.get('token');
+            
+            if (!token) {
+                showError("Please Login First.");
+                return;
+            }
+
+            // Clean token if it contains URL parameters
+            token = cleanToken(token);
+            console.log("Cleaned Token:", token);
+
+            if (!isValidToken(token)) {
+                showError("Invalid token format");
+                return;
+            }
+
+            try {
+                // Store token and verify
+                localStorage.setItem("token", token);
+                const storedToken = localStorage.getItem("token");
+                
+                if (storedToken !== token) {
+                    throw new Error("Token storage verification failed");
+                }
+
+                // Redirect to main page
+                window.location.href = "main.html";
+            } catch (error) {
+                showError(`Session creation failed: ${error.message}`);
+            }
+        }
+
+        function cleanToken(token) {
+            // Handle cases where token might include unwanted parameters
+            return token.split('?')[0].split('&')[0].trim();
+        }
+
+        function isValidToken(token) {
+            // Basic JWT validation (3 parts separated by dots)
+            return token && typeof token === 'string' && token.split('.').length === 3;
+        }
+
+        function showError(message) {
+            console.error(message);
+            const container = document.getElementById('accesscontainer');
+            container.innerHTML = `
+                <h3>Access Denied</h3>
+                <p>${message}</p>
+                <button type = "button" onclick = "window.location.href='http://bellblaze-dev.s3-website.ap-south-1.amazonaws.com/login?DomainPath=/pricing-calculator'">Click here for login</button>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,3 @@
-
 body, .stApp {
     background-color: #FFFFFF !important;  /* White Background */
     font-family: 'Arial', sans-serif;
@@ -71,7 +70,7 @@ h1, h2, h3, h4, h5, h6 {
 .stTextInput > div > div > input, textarea {
     background-color: #FFFFFF !important; /* White for Light Mode */
     color: #000000 !important; /* Black Text */
-    border: 1px solid #000000 !important;
+    /* border: 1px solid #000000 !important; */
     border-radius: 8px;
     padding: 8px 12px;
 }
@@ -192,4 +191,160 @@ footer {
     width: 100px; /* Adjust logo size */
     border-radius: 12px; /* Optional: Add rounded corners */
 }
+
+/* Chat Input Styling */
+[data-testid="stChatInput"] {
+    background-color: #ffffff;
+    border-radius: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 8px 16px;
+    margin: 10px 0;
+    border: 1px solid #e0e0e0;
+}
+
+[data-testid="stChatInput"] > div {
+    padding: 0 !important;
+}
+
+[data-testid="stChatInput"] > div:last-child {
+    background-color: #ffffff !important;
+    border-radius: 20px;
+    padding: 4px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+[data-testid="stChatInput"] input {
+    border: none !important;
+    border-radius: 20px !important;
+    padding: 12px 16px !important;
+    background-color: #f8f9fa !important;
+    color: #333333 !important;
+    font-size: 15px !important;
+    box-shadow: none !important;
+    transition: all 0.3s ease;
+    margin-right: 8px !important;
+    flex-grow: 1;
+}
+
+[data-testid="stChatInput"] input:focus {
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 2px rgba(23, 167, 224, 0.1) !important;
+}
+
+[data-testid="stChatInput"] button {
+    border-radius: 50% !important;
+    background-color: #17a7e0 !important;
+    padding: 8px !important;
+    margin-left: 5px !important;
+    aspect-ratio: 1 !important;
+    transition: all 0.3s ease;
+}
+
+[data-testid="stChatInput"] button[kind="secondary"] {
+    background-color: transparent !important;
+    color: #666666 !important;
+    border: none !important;
+    padding: 6px !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease;
+}
+
+[data-testid="stChatInput"] button[kind="secondary"]:hover {
+    background-color: #f0f0f0 !important;
+    color: #333333 !important;
+}
+
+[data-testid="stChatInput"] button[kind="primary"] {
+    background-color: #17a7e0 !important;
+    border-radius: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: 8px !important;
+    transition: all 0.2s ease;
+}
+
+[data-testid="stChatInput"] button[kind="primary"]:hover {
+    background-color: #1590c2 !important;
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(23, 167, 224, 0.3);
+}
+
+[data-testid="stChatInput"] button:hover {
+    background-color: #1590c2 !important;
+    transform: scale(1.05);
+}
+
+[data-testid="stChatInput"] div[data-testid="stEmojiPicker"] {
+    background-color: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #e0e0e0 !important;
+}
+
+/* Chat Message Container Styling */
+[data-testid="stChatMessageContent"] {
+    background-color: #f8f9fa;
+    border-radius: 15px;
+    padding: 12px 18px;
+    margin: 5px 0;
+    box-shadow: 0 1px 3px rgba(253, 252, 252, 0.05);
+    color: #000000 !important;  /* Ensure text is always black */
+}
+
+/* Assistant Message Styling */
+[data-testid="stChatMessage"][data-testid="assistant"] {
+    background-color: #e3f2fd;
+}
+
+[data-testid="stChatMessage"][data-testid="assistant"] p {
+    color: #000000 !important;  /* Force black text for assistant messages */
+}
+
+/* User Message Styling */
+[data-testid="stChatMessage"][data-testid="user"] {
+    background-color: #f5f5f5;
+}
+
+[data-testid="stChatMessage"][data-testid="user"] p {
+    color: #000000 !important;  /* Force black text for user messages */
+}
+
+/* Dark mode specific chat styling */
+@media (prefers-color-scheme: dark) {
+    [data-testid="stChatMessageContent"],
+    [data-testid="stChatMessage"][data-testid="assistant"] p,
+    [data-testid="stChatMessage"][data-testid="user"] p {
+        color: #000000 !important;  /* Keep text black in dark mode */
+    }
+    
+    [data-testid="stChatMessage"][data-testid="assistant"] {
+        background-color: #e3f2fd !important;  /* Keep light background for contrast */
+    }
+    
+    [data-testid="stChatMessage"][data-testid="user"] {
+        background-color: #f5f5f5 !important;  /* Keep light background for contrast */
+    }
+}
+
+/* Emoji Size in Chat */
+[data-testid="stChatMessage"] img.emoji {
+    height: 18px;
+    width: 18px;
+    margin: 0 2px;
+    vertical-align: middle;
+}
+
 

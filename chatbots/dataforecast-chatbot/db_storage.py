@@ -2,25 +2,35 @@ import os
 import json
 import pickle
 import logging
+import time
+import sys
 from sqlalchemy import create_engine, Column, Integer, String, Text, LargeBinary, ForeignKey, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import JSONB
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from dotenv import load_dotenv, find_dotenv
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+env_path = find_dotenv()
+if env_path:
+    logger.info(f"Found .env file at: {env_path}")
+    load_dotenv(env_path)
+else:
+    logger.warning("No .env file found. Using default values.")
 
 # Get PostgreSQL connection details from environment variables
 DB_USER = os.getenv('DB_USER', 'postgres')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '5432')
-DB_NAME = os.getenv('DB_NAME', 'postgres2')
+DB_NAME = os.getenv('DB_NAME', 'postgres')
+
+# Print connection details (password obscured)
+logger.info(f"Database config: USER={DB_USER}, HOST={DB_HOST}, PORT={DB_PORT}, DB={DB_NAME}")
 
 # Create SQLAlchemy engine
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -38,6 +48,8 @@ class User(Base):
     email = Column(String(100), nullable=True)
     paid_user = Column(Integer, default=0)
     usage_count = Column(Integer, default=0)
+    premium_usage_count = Column(Integer, default=0)  # Track premium usage separately
+    subscription_expires_at = Column(String(100), nullable=True)  # Store expiration timestamp
     
     # Relationships
     chat_histories = relationship("ChatHistory", back_populates="user", cascade="all, delete-orphan")
@@ -86,6 +98,18 @@ class Model(Base):
         UniqueConstraint('user_id', 'name', name='_user_model_name_uc'),
     )
 
+class Transaction(Base):
+    __tablename__ = 'bbt_tempusers'
+    
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone = Column(Integer, nullable=True)
+    app_id = Column(String(255), nullable=False)
+    order_id = Column(String(255), nullable=False, primary_key=True)
+    
+    def __repr__(self):
+        return f"<Transaction(name={self.name}, email={self.email}, phone={self.phone}, app_id={self.app_id}, order_id={self.order_id})>"
+
 # Function to initialize the database
 def initialize_database():
     """Create database tables if they don't exist"""
@@ -104,31 +128,56 @@ def save_user_data(users_dict):
     
     try:
         for username, user_data in users_dict.items():
-            # Check if user exists
-            user = session.query(User).filter_by(username=username).first()            
-            if user:
-                # Update existing user
-                user.password_hash = user_data.get('password', '')
-                user.email = user_data.get('email', '')
-                user.paid_user = user_data.get('paid_user', 0)
-                user.usage_count = user_data.get('usage_count', 0)
-            else:
-                # Create new user
-                new_user = User(
-                    username=username,
-                    password_hash=user_data.get('password', ''),
-                    email=user_data.get('email', ''),
-                    paid_user=user_data.get('paid_user', 0),
-                    usage_count=user_data.get('usage_count', 0)
-                )
-                session.add(new_user)
-        
-        session.commit()
-        logger.info("User data saved to database successfully")
+            try:
+                # Sanitize username and other values
+                sanitized_username = username.strip() if username else "default_user"
+                
+                # Log the attempt to save
+                logger.info(f"Saving data for user: {sanitized_username}")
+                
+                # Check if user exists
+                user = session.query(User).filter_by(username=sanitized_username).first()
+                
+                if user:
+                    # Update existing user
+                    logger.info(f"Updating existing user: {sanitized_username}")
+                    user.password_hash = user_data.get('password', '')
+                    user.email = user_data.get('email', '')
+                    user.paid_user = user_data.get('paid_user', 0)
+                    user.usage_count = user_data.get('usage_count', 0)
+                    user.premium_usage_count = user_data.get('premium_usage_count', 0)
+                    user.subscription_expires_at = user_data.get('subscription_expires_at', None)
+                else:
+                    # Create new user
+                    logger.info(f"Creating new user: {sanitized_username}")
+                    new_user = User(
+                        username=sanitized_username,
+                        password_hash=user_data.get('password', ''),
+                        email=user_data.get('email', ''),
+                        paid_user=user_data.get('paid_user', 0),
+                        usage_count=user_data.get('usage_count', 0),
+                        premium_usage_count=user_data.get('premium_usage_count', 0),
+                        subscription_expires_at=user_data.get('subscription_expires_at', None)
+                    )
+                    session.add(new_user)
+                
+                # Try to commit changes for this user
+                try:
+                    session.commit()
+                    logger.info(f"Successfully saved data for user: {sanitized_username}")
+                except Exception as user_error:
+                    session.rollback()
+                    logger.error(f"Error saving specific user {sanitized_username}: {str(user_error)}")
+                    # Continue with next user
+            except Exception as inner_error:
+                logger.error(f"Error processing user entry {username}: {str(inner_error)}")
+                # Continue with next user
+                
+        logger.info("User data save process completed")
         return True
     except Exception as e:
         session.rollback()
-        logger.error(f"Error saving user data to database: {e}")
+        logger.error(f"Error in overall save_user_data process: {str(e)}")
         return False
     finally:
         session.close()
@@ -146,7 +195,9 @@ def load_user_data():
                 'password': user.password_hash,
                 'email': user.email,
                 'paid_user': user.paid_user,
-                'usage_count': user.usage_count
+                'usage_count': user.usage_count,
+                'premium_usage_count': user.premium_usage_count,
+                'subscription_expires_at': user.subscription_expires_at
             }
         
         logger.info("User data loaded from database successfully")
@@ -345,7 +396,7 @@ def save_model(username, model_name, model_binary):
         session.close()
 
 def load_model(username, model_name):
-    """Load model binary from PostgreSQL database"""
+    """Load user's saved model from PostgreSQL database"""
     session = Session()
     
     try:
@@ -358,13 +409,80 @@ def load_model(username, model_name):
         model = session.query(Model).filter_by(user_id=user.id, name=model_name).first()
         
         if not model:
-            logger.warning(f"Model {model_name} not found")
+            logger.warning(f"Model {model_name} not found for user {username}")
             return None
         
-        logger.info(f"Model {model_name} loaded from database successfully")
-        return model.binary_data
+        binary_data = model.binary_data
+        
+        try:
+            loaded_model = pickle.loads(binary_data)
+            logger.info(f"Model {model_name} for {username} loaded from database successfully")
+            return loaded_model
+        except Exception as e:
+            logger.error(f"Error deserializing model: {e}")
+            return None
     except Exception as e:
         logger.error(f"Error loading model from database: {e}")
+        return None
+    finally:
+        session.close()
+
+# Transaction functions
+def save_transaction(name, email, phone, app_id, order_id):
+    """Save transaction to PostgreSQL database"""
+    session = Session()
+    
+    try:
+        # Check if transaction exists
+        transaction = session.query(Transaction).filter_by(app_id=app_id, order_id=order_id).first()
+        
+        if transaction:
+            logger.warning(f"Transaction {app_id} {order_id} already exists")
+            return False
+        
+        # Create new transaction
+        new_transaction = Transaction(
+            name=name,
+            email=email,
+            phone=phone,
+            app_id=app_id,
+            order_id=order_id
+        )
+        session.add(new_transaction)
+        session.commit()
+        
+        logger.info(f"Transaction {app_id} {order_id} saved to database successfully")
+        return True
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error saving transaction to database: {e}")
+        return False
+    finally:
+        session.close()
+
+def get_transaction_by_id(app_id, order_id):
+    """Get transaction by ID from PostgreSQL database"""
+    session = Session()
+    
+    try:
+        transaction = session.query(Transaction).filter_by(app_id=app_id, order_id=order_id).first()
+        
+        if not transaction:
+            logger.warning(f"Transaction {app_id} {order_id} not found")
+            return None
+        
+        transaction_dict = {
+            'name': transaction.name,
+            'email': transaction.email,
+            'phone': transaction.phone,
+            'app_id': transaction.app_id,
+            'order_id': transaction.order_id
+        }
+        
+        logger.info(f"Transaction {app_id} {order_id} retrieved from database successfully")
+        return transaction_dict
+    except Exception as e:
+        logger.error(f"Error retrieving transaction from database: {e}")
         return None
     finally:
         session.close()
@@ -374,3 +492,39 @@ try:
     initialize_database()
 except Exception as e:
     logger.warning(f"Database initialization warning: {e}") 
+    
+def test_connection():
+    """Test the database connection and return connection status"""
+    try:
+        # Display environment variables for debugging
+        print(f"Environment variables:")
+        print(f"DB_USER: {os.getenv('DB_USER', 'Not set')}")
+        print(f"DB_HOST: {os.getenv('DB_HOST', 'Not set')}")
+        print(f"DB_PORT: {os.getenv('DB_PORT', 'Not set')}")
+        print(f"DB_NAME: {os.getenv('DB_NAME', 'Not set')}")
+        print(f"Connection URL: {DATABASE_URL.replace(DB_PASSWORD, '********')}")
+        
+        # Try to connect and run a simple query
+        with engine.connect() as connection:
+            # Simply establishing a connection is enough to verify it works
+            print("Successfully established a database connection!")
+            
+        logger.info("Database connection successful")
+        return True
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        print(f"\nError details: {str(e)}")
+        print("\nTroubleshooting suggestions:")
+        print("1. Check if PostgreSQL is running (brew services list)")
+        print("2. Verify username and password in .env file")
+        print("3. Make sure the database exists ('subscriptionpanel')")
+        print("4. Check if the roles/users are correctly set up in PostgreSQL")
+        print("5. Try connecting with: psql -U postgres -h localhost -p 5432 -d subscriptionpanel")
+        return False
+
+if __name__ == "__main__":
+    # Run connection test if script is executed directly
+    print("Running database connection test...")
+    connection_result = test_connection()
+    print(f"\nDatabase connection test result: {'Success' if connection_result else 'Failed'}") 
+

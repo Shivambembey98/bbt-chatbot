@@ -1,0 +1,535 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #E3E9FD, #CAD6FC);
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.logo {
+    padding: 10px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 200px; /* Adjust size */
+    height: auto;
+    opacity: 0.8; /* Adjust transparency */
+}
+
+h1 {
+    padding-top: 30px;
+    padding-bottom: 30px;
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 90%;
+    max-width: 1200px;
+}
+
+.column {
+    flex: 1;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    color: #333;
+}
+
+p {
+    margin-top: 3px;
+    margin-left: 8px;
+    font-size: 11px;
+}
+
+.col {
+    margin-right: 20px;
+}
+
+.upload-section {
+    display: flex;
+}
+
+.upload-section, .file-list-section {
+    position: static;
+    background: #e5f5fa;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    text-align: left;
+    padding-right: 25px;
+    margin-top: 12px;
+    margin-bottom: 30px;
+}
+
+#fileInput, #fileDropdown {
+    position: static;
+    width: 300px;
+    margin-left: 8px;
+    margin-right: 50px;
+}
+
+.status-message {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #2e80bb;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+button {
+    align-items: center; /* Align text and image in center */
+    justify-content: center; /* Center content */
+    background:#2e80bb;
+    color: white;
+    margin-left: 10px;
+    padding: 6px 10px;
+    padding-left: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    font-size: 14px;
+}
+
+#subscribeButtonContainer {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.subscribe {
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+.logout {
+    padding: 8px 12px;
+    width: auto;
+    min-width: 80px;
+    font-size: 15px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    position: static; 
+    margin: 0;
+}
+
+.logout:hover {
+    background: #b52a2a;
+    transform: scale(1.05);
+}
+
+.usage-counter {
+    margin: 15px 0;
+    padding: 10px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.usage-counter strong {
+    color: #dc3545;
+}
+
+.usage-counter span {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.premium-badge {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 1rem;
+    margin: 10px 0;
+}
+
+.premium-badge strong {
+    font-weight: 600;
+    color: white;
+}
+
+.button-icon {
+    width: 20px; /* Adjust icon size */
+    height: auto;
+    margin-right: 5px; /* Space between icon and text */
+}
+
+.icon {
+    padding-top: 6px;
+    width: 15px; /* Adjust icon size */
+    height: auto;
+    margin-right: 8px; /* Space between icon and text */
+}
+
+button:hover {
+    background: #0056b3;
+    transform: scale(1.05);
+}
+
+.user-info-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.welcome-message {
+    font-size: 1em;
+    color: #2c3e50;
+    margin-bottom: 5px;
+    font-weight: bold;
+    text-align: right;
+}
+
+.chatbox {
+    height: 300px;
+    border-radius: 10px;
+    padding: 10px;
+    overflow-y: auto;  /* Enables scrolling */
+    background: #eef7fa;
+    max-height: 400px; /* Prevents overflowing */
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #2e80bb;
+}
+
+.chat-input button {
+    padding: 10px 15px;
+}
+
+.m1{
+padding-top: 10px;
+padding-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .column {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .upload-section,
+    .file-list-section {
+        flex-direction: column;
+        align-items: flex-start;
+        padding-right: 10px;
+    }
+
+    #fileInput, #fileDropdown {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    button {
+        margin: 10px 0;
+        width: 100%; /* Full width for easy tapping */
+    }
+
+    .subscribe {
+        width: 100%;
+    }
+
+    .logo {
+        position: static;
+        width: 100%;
+        max-width: 200px;
+        display: block;
+        margin: 10px auto;
+    }
+
+    .user-info-container {
+        top: 5px;
+        right: 5px;
+    }
+    
+    .welcome-message {
+        font-size: 0.8em;
+        white-space: nowrap; /* Prevent text wrapping */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px; /* Limit width on small screens */
+    }
+    
+    .logout {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .chatbox {
+        height: 250px;
+    }
+
+    .usage-counter {
+        position: static;
+        margin-top: 20px;
+        width: 100%;
+    }
+
+    .chat-input {
+        flex-direction: column;
+    }
+
+    .chat-input input,
+    .chat-input button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.8em;
+    }
+
+    h2 {
+        font-size: 1.2em;
+    }
+
+    .button-icon, .icon {
+        width: 16px;
+    }
+
+    .welcome-message {
+        font-size: 0.7em;
+        max-width: 120px;
+    }
+    
+    .logout {
+        padding: 5px 8px;
+        font-size: 11px;
+        max-width: 70px;
+    }
+
+    .upload-section,
+    .file-list-section {
+        padding: 10px;
+    }
+
+    .usage-counter {
+        position: static;
+        margin-top: 20px;
+        width: 100%;
+    }
+}
+
+/* Subscription Page Styles */
+.subscription-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.subscription-container h1 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.subscription-container p {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #444;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.plan-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.plan-selection label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.proceed-button {
+    width: 100%;
+    padding: 1rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.proceed-button:hover {
+    background-color: #45a049;
+}
+
+/* Payment Status Pages */
+.payment-status-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.success-message, .cancel-message {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.success-message h1 {
+    color: #4CAF50;
+}
+
+.cancel-message h1 {
+    color: #f44336;
+}
+
+.payment-status-container button {
+    padding: 0.75rem 1.5rem;
+    margin: 0.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.payment-status-container button:first-of-type {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.payment-status-container button:first-of-type:hover {
+    background-color: #45a049;
+}
+
+.payment-status-container button:last-of-type {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+.payment-status-container button:last-of-type:hover {
+    background-color: #ddd;
+}
+
+input:invalid {
+    border-color: #ff9999;
+}
+
+input:focus:invalid {
+    border-color: #ff6666;
+    box-shadow: 0 0 5px rgba(255, 102, 102, 0.5);
+}
+
+.error-message {
+    color: #ff4444;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+input:invalid + .error-message {
+    display: block;
+}
+
+.payment-status-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+.success-message {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.success-message h1 {
+    color: #4CAF50;
+    margin-bottom: 1rem;
+}
+
+.success-message p {
+    margin-bottom: 1.5rem;
+    color: #555;
+}
+
+#redirect-button {
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+    padding: 0.75rem 1.5rem;
+}
